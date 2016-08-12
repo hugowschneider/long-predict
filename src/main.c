@@ -83,8 +83,7 @@ int fractionalDigits(double d) {
                 lsbFound = 1;
                 lsbPos = -lsbPosInNibble[hdigit];
             }
-        }
-        else {
+        } else {
             lsbPos -= 4;
         }
     }
@@ -100,8 +99,9 @@ int fractionalDigits(double d) {
     if (lsbPos >= 0 && e >= 0)
         return 0; // lsbPos + e >= 0, d is integer
 
-    if (lsbPos < 0 && e < 0) if (lsbPos < INT_MIN - e)
-        return -2; // d isn't integer and needs too many fractional digits
+    if (lsbPos < 0 && e < 0)
+        if (lsbPos < INT_MIN - e)
+            return -2; // d isn't integer and needs too many fractional digits
 
     if ((lsbPos += e) >= 0)
         return 0; // d is integer
@@ -202,8 +202,7 @@ double predictData(const char *seqName, const char *seq, const Config *config, F
         }
     }
     x[i].index = -1;
-    fprintf(output, ">%s", seqName);
-
+//    fprintf(output, ">%s", seqName);
 //    for (int i = 0; x[i].index != -1; ++i) {
 //        fprintf(output, " %d:%.16f", i + 1, x[i].value);
 //
@@ -333,10 +332,10 @@ int main(int argc, char *argv[]) {
         usage(argc, argv);
     }
 
-    directDataPath = malloc(sizeof(char) * (strlen(fastaFile) + 9));
+    directDataPath = malloc(sizeof(char) * (strlen(fastaFile) + 10));
     strcpy(directDataPath, fastaFile);
     strcat(directDataPath, ".pred.csv");
-    complementaryDataPath = malloc(sizeof(char) * (strlen(fastaFile) + 17));
+    complementaryDataPath = malloc(sizeof(char) * (strlen(fastaFile) + 18));
     strcpy(complementaryDataPath, fastaFile);
     strcat(complementaryDataPath, ".reverse.pred.csv");
 
@@ -364,16 +363,19 @@ int main(int argc, char *argv[]) {
     seq = kseq_init(fp);
 
     struct svm_model *model = svm_load_model(config->modelFile);
-
-    fprintf(directData, "ID,Size,Classification,Probability lncRNA,Probability PCT\n");
+    if (directData) {
+        fprintf(directData, "ID,Size,Classification,Probability lncRNA,Probability PCT\n");
+    }
+    if (reverseData) {
+        fprintf(reverseData, "ID,Size,Classification,Probability lncRNA,Probability PCT\n");
+    }
     size_t count = 0;
     size_t reversePositive = 0;
     size_t positive = 0;
     while ((l = kseq_read(seq)) >= 0) {
-        count++;
         if (strlen(seq->seq.s) >= sizeLimit) {
+            count++;
             if (directData) {
-
                 if (predictData(seq->name.s, seq->seq.s, config, directData, model) > 0) {
                     positive++;
                 }
@@ -394,12 +396,13 @@ int main(int argc, char *argv[]) {
     gzclose(fp);
 
     if (directData) {
-        printf("Predicted lncRNAs: %.2f (%zu/%zu)", ((double) positive / (double) count) * 100.0, positive, count);
+        printf("Predicted lncRNAs: %.2f%% (%zu/%zu)\n", ((double) positive / (double) count) * 100.0, positive, count);
         fclose(directData);
     }
 
     if (reverseData) {
-        printf("Predicted lncRNAs in complementary sequence: %.2f (%zu/%zu)", ((double) reversePositive / (double) count) * 100.0, reversePositive, count);
+        printf("Predicted lncRNAs in complementary sequence: %.2f%% (%zu/%zu)\n",
+               ((double) reversePositive / (double) count) * 100.0, reversePositive, count);
         fclose(reverseData);
     }
 

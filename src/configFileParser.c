@@ -87,7 +87,6 @@ Config *parseConfigFile(const char *configFilePath) {
                     strcpy(config->modelFile, dirPath);
                     strcat(config->modelFile, "/");
                     strcat(config->modelFile, valueBuffer);
-                    printf("%s\n",config->modelFile);
                 } else if (strcasecmp(propBuffer, "attributes") == 0) {
                     tokenCount = 0;
 

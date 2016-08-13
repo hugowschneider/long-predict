@@ -364,6 +364,7 @@ int main(int argc, char *argv[]) {
     fp = gzopen(fastaFile, "r");
     seq = kseq_init(fp);
 
+    printf("Model file: %s\n", config->modelFile);
     struct svm_model *model = svm_load_model(config->modelFile);
     if (directData) {
         fprintf(directData, "ID,Size,Classification,Probability lncRNA,Probability PCT\n");

@@ -128,7 +128,8 @@ size_t firstOrfSize(SuffixArray sa, const char *seq) {
     size_t length;
     size_t maxLenght;
     const char *suffix;
-
+    size_t i;
+    size_t j;
     count = suffixArraySearch(sa, "atg", &first);
 
     if (count) {
@@ -140,7 +141,7 @@ size_t firstOrfSize(SuffixArray sa, const char *seq) {
                 suffix = sa->suffix[i];
             }
         }
-        for (int j = CODON_LENGTH; j + CODON_LENGTH < strlen(suffix); j += CODON_LENGTH) {
+        for (j = CODON_LENGTH; j + CODON_LENGTH < strlen(suffix); j += CODON_LENGTH) {
             if (strncmp(suffix + j, "taa", CODON_LENGTH) == 0 ||
                 strncmp(suffix + j, "tga", CODON_LENGTH) == 0 ||
                 strncmp(suffix + j, "tag", CODON_LENGTH) == 0) {
@@ -172,7 +173,7 @@ double predictData(const char *seqName, const char *seq, const Config *config, F
 
     orfLength = -1;
     struct svm_node *x = malloc(sizeof(struct svm_node) * (config->attributeVectorSize + 1));
-    int i;
+    size_t i, j;
     for (i = 0; i < config->attributeVectorSize; ++i) {
         char *attr = config->attributes[i];
 
@@ -193,7 +194,7 @@ double predictData(const char *seqName, const char *seq, const Config *config, F
             attr_length = strlen(attr);
 
             total = 0;
-            for (int j = 0; j < attr_length; ++j) {
+            for (j = 0; j < attr_length; ++j) {
                 total += (length - j) / attr_length;
             }
 
@@ -248,7 +249,8 @@ void reverse(char *str) {
 }
 
 void complementary(char *seq) {
-    for (int i = 0; i < strlen(seq); ++i) {
+    size_t i;
+    for ( i = 0; i < strlen(seq); ++i) {
         switch (seq[i]) {
             case 'a':
                 seq[i] = 't';

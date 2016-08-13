@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <libgen.h>
 
 #include "configFileParser.h"
 
@@ -42,7 +43,7 @@ size_t trimwhitespace(char *out, size_t len, const char *str)
     return out_size;
 }
 
-Config *parseConfigFile(const char *configFilePath) {
+Config *parseConfigFile(char *configFilePath) {
 
     Config *config = 0;
     FILE *configFile;
@@ -57,6 +58,7 @@ Config *parseConfigFile(const char *configFilePath) {
 
     char *token;
     char **attributes;
+    char * dir  = dirname(configFilePath);
 
     buffer = (char *) malloc(bufferSize * sizeof(char));
     propBuffer = (char *) malloc(bufferSize * sizeof(char));
@@ -80,8 +82,10 @@ Config *parseConfigFile(const char *configFilePath) {
             if (sscanf(buffer, "%[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ]=%s", propBuffer, valueBuffer) ==
                 2) {
                 if (strcasecmp(propBuffer, "modelFile") == 0) {
-                    config->modelFile = malloc(strlen(valueBuffer));
-                    strcpy(config->modelFile, valueBuffer);
+                    config->modelFile = malloc(strlen(valueBuffer) + strlen(dir) + 2);
+                    strcpy(config->modelFile, dir);
+                    strcat(config->modelFile, "/");
+                    strcat(config->modelFile, valueBuffer);
                 } else if (strcasecmp(propBuffer, "attributes") == 0) {
                     tokenCount = 0;
 

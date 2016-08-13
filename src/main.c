@@ -28,101 +28,8 @@ void usage(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
 }
 
-int fractionalDigits(double d) {
-    char buf[
-            1 + // sign, '-' or '+'
-            (sizeof(d) * CHAR_BIT + 3) / 4 + // mantissa hex digits max
-            1 + // decimal point, '.'
-            1 + // mantissa-exponent separator, 'p'
-            1 + // mantissa sign, '-' or '+'
-            (sizeof(d) * CHAR_BIT + 2) / 3 + // exponent decimal digits max
-            1 // string terminator, '\0'
-    ];
-    int n;
-    char *pp, *p;
-    int e, lsbFound, lsbPos;
 
-    // convert d into "+/- 0x h.hhhh p +/- ddd" representation and check for errors
-    if ((n = snprintf(buf, sizeof(buf), "%+a", d)) < 0 ||
-        (unsigned) n >= sizeof(buf))
-        return -1;
-
-//printf("{%s}", buf);
-
-    // make sure the conversion didn't produce something like "nan" or "inf"
-    // instead of "+/- 0x h.hhhh p +/- ddd"
-    if (strstr(buf, "0x") != buf + 1 ||
-        (pp = strchr(buf, 'p')) == NULL)
-        return 0;
-
-    // extract the base-2 exponent manually, checking for overflows
-    e = 0;
-    p = pp + 1 + (pp[1] == '-' || pp[1] == '+'); // skip the exponent sign at first
-    for (; *p != '\0'; p++) {
-        if (e > INT_MAX / 10)
-            return -2;
-        e *= 10;
-        if (e > INT_MAX - (*p - '0'))
-            return -2;
-        e += *p - '0';
-    }
-    if (pp[1] == '-') // apply the sign to the exponent
-        e = -e;
-
-//printf("[%s|%d]", buf, e);
-
-    // find the position of the least significant non-zero bit
-    lsbFound = lsbPos = 0;
-    for (p = pp - 1; *p != 'x'; p--) {
-        if (*p == '.')
-            continue;
-        if (!lsbFound) {
-            int hdigit = (*p >= 'a') ? (*p - 'a' + 10) : (*p - '0'); // assuming ASCII chars
-            if (hdigit) {
-                static const int lsbPosInNibble[16] = {0, 4, 3, 4, 2, 4, 3, 4, 1, 4, 3, 4, 2, 4, 3, 4};
-                lsbFound = 1;
-                lsbPos = -lsbPosInNibble[hdigit];
-            }
-        } else {
-            lsbPos -= 4;
-        }
-    }
-    lsbPos += 4;
-
-    if (!lsbFound)
-        return 0; // d is 0 (integer)
-
-    // adjust the least significant non-zero bit position
-    // by the base-2 exponent (just add them), checking
-    // for overflows
-
-    if (lsbPos >= 0 && e >= 0)
-        return 0; // lsbPos + e >= 0, d is integer
-
-    if (lsbPos < 0 && e < 0)
-        if (lsbPos < INT_MIN - e)
-            return -2; // d isn't integer and needs too many fractional digits
-
-    if ((lsbPos += e) >= 0)
-        return 0; // d is integer
-
-    if (lsbPos == INT_MIN && -INT_MAX != INT_MIN)
-        return -2; // d isn't integer and needs too many fractional digits
-
-    return -lsbPos;
-}
-
-int compare(const void *a, const void *b) {
-    size_t size_t_a = *((size_t *) a);
-    size_t size_t_b = *((size_t *) b);
-
-    if (size_t_a == size_t_b) return 0;
-    else if (size_t_a < size_t_b) return -1;
-    else return 1;
-}
-
-
-size_t firstOrfSize(SuffixArray sa, const char *seq) {
+size_t firstOrfSize(SuffixArray sa) {
     size_t first;
     size_t count;
     size_t length;
@@ -131,7 +38,7 @@ size_t firstOrfSize(SuffixArray sa, const char *seq) {
     size_t i;
     size_t j;
     count = suffixArraySearch(sa, "atg", &first);
-
+    suffix = NULL;
     if (count) {
         maxLenght = 0;
         for (i = first; i < first + count; i++) {
@@ -173,20 +80,20 @@ double predictData(const char *seqName, const char *seq, const Config *config, F
 
     orfLength = -1;
     struct svm_node *x = malloc(sizeof(struct svm_node) * (config->attributeVectorSize + 1));
-    size_t i, j;
+    int i, j;
     for (i = 0; i < config->attributeVectorSize; ++i) {
         char *attr = config->attributes[i];
 
         x[i].index = i + 1;
         if (strcasecmp(attr, "ol") == 0) {
             if (orfLength == -1) {
-                orfLength = firstOrfSize(sa, seq);
+                orfLength = firstOrfSize(sa);
             }
             x[i].value = orfLength;
 
         } else if (strcasecmp(attr, "op") == 0) {
             if (orfLength == -1) {
-                orfLength = firstOrfSize(sa, seq);
+                orfLength = firstOrfSize(sa);
             }
             x[i].value = (double) orfLength / (double) length;
         } else {
@@ -280,10 +187,6 @@ int main(int argc, char *argv[]) {
     char *fastaFile = NULL;
     char *direction = NULL;
 
-    char *querySequence;
-
-    SuffixArray sa;
-
     gzFile fp;
     kseq_t *seq;
     int l;
@@ -308,7 +211,7 @@ int main(int argc, char *argv[]) {
                 direction = optarg;
                 break;
             case 's':
-                if (sscanf(optarg, "%zd", &sizeLimit) < 1 || sizeLimit < 0) {
+                if (sscanf(optarg, "%zu", &sizeLimit) < 1 || sizeLimit < 0) {
                     sizeLimit = 200;
                 }
                 break;
@@ -357,7 +260,16 @@ int main(int argc, char *argv[]) {
     }
 
     if (access(fastaFile, F_OK | R_OK) == -1) {
-        printf("Cannot read fasta file '%s'.\n", fastaFile);
+        fprintf(stderr, "Cannot read fasta file '%s'.\n", fastaFile);
+        free(directDataPath);
+        free(complementaryDataPath);
+        usage(argc, argv);
+    }
+
+    if (access(config->modelFile, F_OK | R_OK) == -1) {
+        fprintf(stderr, "Cannot read model file '%s'. Please review your config file\n", config->modelFile);
+        free(directDataPath);
+        free(complementaryDataPath);
         usage(argc, argv);
     }
 

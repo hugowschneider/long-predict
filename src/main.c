@@ -134,7 +134,7 @@ size_t firstOrfSize(SuffixArray sa, const char *seq) {
 
     if (count) {
         maxLenght = 0;
-        for (size_t i = first; i < first + count; i++) {
+        for (i = first; i < first + count; i++) {
             length = strlen(sa->suffix[i]);
             if (maxLenght < length) {
                 maxLenght = length;

@@ -111,7 +111,8 @@ Config *parseConfigFile(const char *configFilePath) {
 }
 
 void configDestroy(Config *config) {
-    for (int i = 0; i < config->attributeVectorSize; ++i) {
+    size_t i;
+    for ( i = 0; i < config->attributeVectorSize; ++i) {
         free(config->attributes[i]);
     }
     free(config->attributes);

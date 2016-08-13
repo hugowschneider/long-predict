@@ -14,7 +14,7 @@ typedef struct {
 } Config;
 
 
-Config * parseConfigFile(const char * configFilePath);
+Config * parseConfigFile(char * configFilePath);
 
 void configDestroy(Config * config);
 

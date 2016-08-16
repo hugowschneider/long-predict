@@ -29,7 +29,7 @@ void usage(int argc, char *argv[]) {
             "\n"
             "Model Config File is a plain text file containing the following attributes:\n"
             "\tmodelFile\tThe path to the model file. It can be relative to the config file or\n"
-            "\t\t\t\ta absolute path\n"
+            "\t\t\t\tan absolute path\n"
             "\tattributes\tThe list of attributes used in the model training. This attributes are valid\n"
             "\t\t\t\tnucleotide frequencies, for example 'aa' and 'atc', and the values 'ol' for\n"
             "\t\t\t\tfirst ORF lenght and 'op' for first ORF percentage of the corresponding transcript\n"

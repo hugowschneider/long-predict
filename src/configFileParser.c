@@ -84,9 +84,17 @@ Config *parseConfigFile(const char *configFilePath) {
                 2) {
                 if (strcasecmp(propBuffer, "modelFile") == 0) {
                     config->modelFile = malloc(strlen(valueBuffer) + strlen(dirPath) + 2);
-                    strcpy(config->modelFile, dirPath);
-                    strcat(config->modelFile, "/");
-                    strcat(config->modelFile, valueBuffer);
+                    trimwhitespace(config->modelFile, strlen(valueBuffer) + 1, valueBuffer);
+                    strcpy(valueBuffer, config->modelFile);
+
+                    if(valueBuffer[0] == '/'){
+                        strcpy(config->modelFile, valueBuffer);
+                    } else {
+                        strcpy(config->modelFile, dirPath);
+                        strcat(config->modelFile, "/");
+                        strcat(config->modelFile, valueBuffer);
+                    }
+
                 } else if (strcasecmp(propBuffer, "attributes") == 0) {
                     tokenCount = 0;
 

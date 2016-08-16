@@ -20,11 +20,24 @@ KSEQ_INIT(gzFile, gzread)
 void usage(int argc, char *argv[]) {
     fprintf(stderr, "Usage: %s -c <model config file> -i <fasta file> [-d <both|-|+> ] [-s <size>]\n"
             "\t-c\tModel config file. File specifying the libSVM model and the used attributes\n"
-            "\t-i\tInput Fasta file for prediction\n"
+            "\t-i\tInput Fasta file for prediction. This file should be a plain text or a gzip fasta\n"
+            "\t\tfile\n"
             "\t-d\tDirection. The direction of the fasta file sequences for prediction. '+' will\n"
             "\t\tread the sequences as is. '-' will use the complementary sequence. And both will\n"
             "\t\tuse both options. This option is used for all sequences in the file. Default '+'\n"
-            "\t-s\tSize limit. This attribute ignore sequences shorter than this limit. Default 200\n", argv[0]);
+            "\t-s\tSize limit. This attribute ignore sequences shorter than this limit. Default 200\n"
+            "\n"
+            "Model Config File is a plain text file containing the following attributes:\n"
+            "\tmodelFile\tThe path to the model file. It can be relative to the config file or\n"
+            "\t\t\t\ta absolute path\n"
+            "\tattributes\tThe list of attributes used in the model training. This attributes are valid\n"
+            "\t\t\t\tnucleotide frequencies, for example 'aa' and 'atc', and the values 'ol' for\n"
+            "\t\t\t\tfirst ORF lenght and 'op' for first ORF percentage of the corresponding transcript\n"
+            "\t\t\t\tlength\n"
+            "Ex.:\n"
+            "modelFile=human.model\n"
+            "attributes=aa,aaa,ac,aca,acg,op\n"
+            "", argv[0]);
     exit(EXIT_FAILURE);
 }
 

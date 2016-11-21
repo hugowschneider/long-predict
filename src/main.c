@@ -5,6 +5,7 @@
 #include <limits.h>
 #include <zlib.h>
 #include <math.h>
+#include <curses.h>
 
 #include "kseq.h"
 #include "suffixArray.h"
@@ -14,11 +15,358 @@
 
 #define CODON_LENGTH 3
 
+#define MAX_PATTERNS 338
+const char possible_attributes[MAX_PATTERNS][5] = {
+        "ol",
+        "op",
+        "aa",
+        "ac",
+        "ag",
+        "at",
+        "ca",
+        "cc",
+        "cg",
+        "ct",
+        "ga",
+        "gc",
+        "gg",
+        "gt",
+        "ta",
+        "tc",
+        "tg",
+        "tt",
+        "aaa",
+        "aac",
+        "aag",
+        "aat",
+        "aca",
+        "acc",
+        "acg",
+        "act",
+        "aga",
+        "agc",
+        "agg",
+        "agt",
+        "ata",
+        "atc",
+        "atg",
+        "att",
+        "caa",
+        "cac",
+        "cag",
+        "cat",
+        "cca",
+        "ccc",
+        "ccg",
+        "cct",
+        "cga",
+        "cgc",
+        "cgg",
+        "cgt",
+        "cta",
+        "ctc",
+        "ctg",
+        "ctt",
+        "gaa",
+        "gac",
+        "gag",
+        "gat",
+        "gca",
+        "gcc",
+        "gcg",
+        "gct",
+        "gga",
+        "ggc",
+        "ggg",
+        "ggt",
+        "gta",
+        "gtc",
+        "gtg",
+        "gtt",
+        "taa",
+        "tac",
+        "tag",
+        "tat",
+        "tca",
+        "tcc",
+        "tcg",
+        "tct",
+        "tga",
+        "tgc",
+        "tgg",
+        "tgt",
+        "tta",
+        "ttc",
+        "ttg",
+        "ttt",
+        "aaaa",
+        "aaac",
+        "aaag",
+        "aaat",
+        "aaca",
+        "aacc",
+        "aacg",
+        "aact",
+        "aaga",
+        "aagc",
+        "aagg",
+        "aagt",
+        "aata",
+        "aatc",
+        "aatg",
+        "aatt",
+        "acaa",
+        "acac",
+        "acag",
+        "acat",
+        "acca",
+        "accc",
+        "accg",
+        "acct",
+        "acga",
+        "acgc",
+        "acgg",
+        "acgt",
+        "acta",
+        "actc",
+        "actg",
+        "actt",
+        "agaa",
+        "agac",
+        "agag",
+        "agat",
+        "agca",
+        "agcc",
+        "agcg",
+        "agct",
+        "agga",
+        "aggc",
+        "aggg",
+        "aggt",
+        "agta",
+        "agtc",
+        "agtg",
+        "agtt",
+        "ataa",
+        "atac",
+        "atag",
+        "atat",
+        "atca",
+        "atcc",
+        "atcg",
+        "atct",
+        "atga",
+        "atgc",
+        "atgg",
+        "atgt",
+        "atta",
+        "attc",
+        "attg",
+        "attt",
+        "caaa",
+        "caac",
+        "caag",
+        "caat",
+        "caca",
+        "cacc",
+        "cacg",
+        "cact",
+        "caga",
+        "cagc",
+        "cagg",
+        "cagt",
+        "cata",
+        "catc",
+        "catg",
+        "catt",
+        "ccaa",
+        "ccac",
+        "ccag",
+        "ccat",
+        "ccca",
+        "cccc",
+        "cccg",
+        "ccct",
+        "ccga",
+        "ccgc",
+        "ccgg",
+        "ccgt",
+        "ccta",
+        "cctc",
+        "cctg",
+        "cctt",
+        "cgaa",
+        "cgac",
+        "cgag",
+        "cgat",
+        "cgca",
+        "cgcc",
+        "cgcg",
+        "cgct",
+        "cgga",
+        "cggc",
+        "cggg",
+        "cggt",
+        "cgta",
+        "cgtc",
+        "cgtg",
+        "cgtt",
+        "ctaa",
+        "ctac",
+        "ctag",
+        "ctat",
+        "ctca",
+        "ctcc",
+        "ctcg",
+        "ctct",
+        "ctga",
+        "ctgc",
+        "ctgg",
+        "ctgt",
+        "ctta",
+        "cttc",
+        "cttg",
+        "cttt",
+        "gaaa",
+        "gaac",
+        "gaag",
+        "gaat",
+        "gaca",
+        "gacc",
+        "gacg",
+        "gact",
+        "gaga",
+        "gagc",
+        "gagg",
+        "gagt",
+        "gata",
+        "gatc",
+        "gatg",
+        "gatt",
+        "gcaa",
+        "gcac",
+        "gcag",
+        "gcat",
+        "gcca",
+        "gccc",
+        "gccg",
+        "gcct",
+        "gcga",
+        "gcgc",
+        "gcgg",
+        "gcgt",
+        "gcta",
+        "gctc",
+        "gctg",
+        "gctt",
+        "ggaa",
+        "ggac",
+        "ggag",
+        "ggat",
+        "ggca",
+        "ggcc",
+        "ggcg",
+        "ggct",
+        "ggga",
+        "gggc",
+        "gggg",
+        "gggt",
+        "ggta",
+        "ggtc",
+        "ggtg",
+        "ggtt",
+        "gtaa",
+        "gtac",
+        "gtag",
+        "gtat",
+        "gtca",
+        "gtcc",
+        "gtcg",
+        "gtct",
+        "gtga",
+        "gtgc",
+        "gtgg",
+        "gtgt",
+        "gtta",
+        "gttc",
+        "gttg",
+        "gttt",
+        "taaa",
+        "taac",
+        "taag",
+        "taat",
+        "taca",
+        "tacc",
+        "tacg",
+        "tact",
+        "taga",
+        "tagc",
+        "tagg",
+        "tagt",
+        "tata",
+        "tatc",
+        "tatg",
+        "tatt",
+        "tcaa",
+        "tcac",
+        "tcag",
+        "tcat",
+        "tcca",
+        "tccc",
+        "tccg",
+        "tcct",
+        "tcga",
+        "tcgc",
+        "tcgg",
+        "tcgt",
+        "tcta",
+        "tctc",
+        "tctg",
+        "tctt",
+        "tgaa",
+        "tgac",
+        "tgag",
+        "tgat",
+        "tgca",
+        "tgcc",
+        "tgcg",
+        "tgct",
+        "tgga",
+        "tggc",
+        "tggg",
+        "tggt",
+        "tgta",
+        "tgtc",
+        "tgtg",
+        "tgtt",
+        "ttaa",
+        "ttac",
+        "ttag",
+        "ttat",
+        "ttca",
+        "ttcc",
+        "ttcg",
+        "ttct",
+        "ttga",
+        "ttgc",
+        "ttgg",
+        "ttgt",
+        "ttta",
+        "tttc",
+        "tttg",
+        "tttt"
+};
+
+
 KSEQ_INIT(gzFile, gzread)
 
 
 void usage(int argc, char *argv[]) {
-    fprintf(stderr, "Usage: %s -c <model config file> -i <fasta file> [-d <both|-|+> ] [-s <size>]\n"
+    fprintf(stderr, "Usage: %s [-o] [-c <model config file>] -i <fasta file> [-d <both|-|+> ] [-s <size>]\n"
+            "\t-o\tData only. Output the frequencies of nucleotides patterns and orf size and relation to \n"
+            "\t\ttranscript size.\n"
+            "\t\tThe model file will determine the nucleotides patterns will be used, if not present, all\n"
+            "\t\tpatterns will be calculated"
             "\t-c\tModel config file. File specifying the libSVM model and the used attributes\n"
             "\t-i\tInput Fasta file for prediction. This file should be a plain text or a gzip fasta\n"
             "\t\tfile\n"
@@ -73,6 +421,78 @@ size_t firstOrfSize(SuffixArray sa) {
 
     }
     return 0;
+}
+
+void compute(const char *seqName, const char *seq, const Config *config, FILE *output) {
+
+    size_t count;
+    size_t attr_length;
+    size_t total;
+    size_t length;
+    ssize_t orfLength;
+    SuffixArray sa;
+    double predict_label;
+    double predict_estimates;
+
+    length = strlen(seq);
+
+    size_t attributeVectorSize;
+    char **attributes;
+
+    sa = suffixArrayCreate(seq);
+
+    if (config) {
+        attributeVectorSize = config->attributeVectorSize;
+        attributes = config->attributes;
+    } else {
+        attributeVectorSize = MAX_PATTERNS;
+        attributes = malloc(attributeVectorSize * sizeof(char *));
+        for (int i = 0; i < attributeVectorSize; ++i) {
+            attributes[i] = (char *) &possible_attributes[i];
+        }
+
+    }
+
+    orfLength = -1;
+    int i, j;
+
+    fprintf(output, "%s", seqName);
+    double value = 0;
+    for (i = 0; i < attributeVectorSize; ++i) {
+        char *attr = attributes[i];
+
+        if (strcasecmp(attr, "ol") == 0) {
+            if (orfLength == -1) {
+                orfLength = firstOrfSize(sa);
+            }
+            value = orfLength;
+
+        } else if (strcasecmp(attr, "op") == 0) {
+            if (orfLength == -1) {
+                orfLength = firstOrfSize(sa);
+            }
+            value = (double) orfLength / (double) length;
+
+        } else {
+            count = suffixArraySearch(sa, attr, NULL);
+            attr_length = strlen(attr);
+
+            total = 0;
+            for (j = 0; j < attr_length; ++j) {
+                total += (length - j) / attr_length;
+            }
+
+            value = (double) count / (double) total;
+
+        }
+        fprintf(output, ",%.16f", value);
+    }
+
+    fprintf(output, "\n");
+    fflush(output);
+
+    suffixArrayDestroy(sa);
+
 }
 
 double predictData(const char *seqName, const char *seq, const Config *config, FILE *output,
@@ -170,7 +590,7 @@ void reverse(char *str) {
 
 void complementary(char *seq) {
     size_t i;
-    for ( i = 0; i < strlen(seq); ++i) {
+    for (i = 0; i < strlen(seq); ++i) {
         switch (seq[i]) {
             case 'a':
                 seq[i] = 't';
@@ -192,9 +612,41 @@ void complementary(char *seq) {
     }
 }
 
+char *join_strings(char *strings[], int count) {
+    char *str = NULL;             /* Pointer to the joined strings  */
+    size_t total_length = 0;      /* Total length of joined strings */
+    size_t length = 0;            /* Length of a string             */
+    int i = 0;                    /* Loop counter                   */
+
+    /* Find total length of joined strings */
+    for (i = 0; i < count; i++) {
+        total_length += strlen(strings[i]);
+        ++total_length; /* For newline to be added */
+    }
+    // ++total_length;     /* For joined string terminator */
+
+    str = (char *) malloc(total_length);  /* Allocate memory for joined strings */
+    str[0] = '\0';                      /* Empty string we can append to      */
+
+    /* Append all the strings */
+    for (i = 0; i < count; i++) {
+        strcat(str, strings[i]);
+        length = strlen(str);
+
+        /* Check if we need to insert newline */
+        if (i + 1 < count) {
+            str[length] = ',';             /* Append a newline       */
+        }
+        str[length + 1] = '\0';           /* followed by terminator */
+
+    }
+    return str;
+}
+
 int main(int argc, char *argv[]) {
 
     int opt;
+    int computeOnly = FALSE;
 
     char *confFile = NULL;
     char *fastaFile = NULL;
@@ -211,8 +663,10 @@ int main(int argc, char *argv[]) {
     char *directDataPath;
     char *complementaryDataPath;
 
+    struct svm_model *model = NULL;
+
     sizeLimit = -1;
-    while ((opt = getopt(argc, argv, "c:i:d:")) != -1) {
+    while ((opt = getopt(argc, argv, "oc:i:d:")) != -1) {
         switch (opt) {
             case 'c':
                 confFile = optarg;
@@ -222,6 +676,9 @@ int main(int argc, char *argv[]) {
                 break;
             case 'd':
                 direction = optarg;
+                break;
+            case 'o':
+                computeOnly = TRUE;
                 break;
             case 's':
                 if (sscanf(optarg, "%zu", &sizeLimit) < 1 || sizeLimit < 0) {
@@ -233,7 +690,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (!confFile) {
+    if (!confFile && !computeOnly) {
         usage(argc, argv);
     }
 
@@ -245,8 +702,11 @@ int main(int argc, char *argv[]) {
         sizeLimit = 200;
     }
 
-    Config *config = parseConfigFile(confFile);
-    if (!config) {
+    Config *config = NULL;
+    if (confFile) {
+        config = parseConfigFile(confFile);
+    }
+    if (!config && !computeOnly) {
         usage(argc, argv);
     }
 
@@ -279,47 +739,108 @@ int main(int argc, char *argv[]) {
         usage(argc, argv);
     }
 
-    if (access(config->modelFile, F_OK | R_OK) == -1) {
+
+    if (!computeOnly && access(config->modelFile, F_OK | R_OK) == -1) {
         fprintf(stderr, "Cannot read model file '%s'. Please review your config file\n", config->modelFile);
         free(directDataPath);
         free(complementaryDataPath);
         usage(argc, argv);
     }
 
+
     fp = gzopen(fastaFile, "r");
     seq = kseq_init(fp);
 
-    printf("Model file: %s\n", config->modelFile);
-    struct svm_model *model = svm_load_model(config->modelFile);
-    if (directData) {
-        fprintf(directData, "ID,Size,Classification,Probability lncRNA,Probability PCT\n");
+    if (config) {
+        printf("Model file: %s\n", config->modelFile);
     }
-    if (reverseData) {
-        fprintf(reverseData, "ID,Size,Classification,Probability lncRNA,Probability PCT\n");
+
+    if (computeOnly) {
+        size_t attributeVectorSize;
+        char **attributes;
+        if (config) {
+            attributeVectorSize = config->attributeVectorSize;
+            attributes = config->attributes;
+        } else {
+            attributeVectorSize = MAX_PATTERNS;
+
+            attributes = malloc(attributeVectorSize * sizeof(char *));
+            for (int i = 0; i < attributeVectorSize; ++i) {
+                attributes[i] = (char *) &possible_attributes[i];
+            }
+
+        }
+
+        char *string = join_strings(attributes, attributeVectorSize);
+
+        if (!config) {
+            free(attributes);
+        }
+
+        if (directData) {
+            fprintf(directData, "ID,");
+            fprintf(directData, "%s", string);
+            fprintf(directData, "\n");
+        }
+        if (reverseData) {
+            fprintf(reverseData, "ID,");
+            fprintf(reverseData, "%s", string);
+            fprintf(reverseData, "\n");
+        }
+
+    } else {
+        model = svm_load_model(config->modelFile);
+        if (directData) {
+            fprintf(directData, "ID,Size,Classification,Probability lncRNA,Probability PCT\n");
+        }
+        if (reverseData) {
+            fprintf(reverseData, "ID,Size,Classification,Probability lncRNA,Probability PCT\n");
+        }
     }
     size_t count = 0;
     size_t reversePositive = 0;
     size_t positive = 0;
-    while ((l = kseq_read(seq)) >= 0) {
-        if (strlen(seq->seq.s) >= sizeLimit) {
-            count++;
-            if (directData) {
-                if (predictData(seq->name.s, seq->seq.s, config, directData, model) > 0) {
-                    positive++;
+    if (computeOnly) {
+        while ((l = kseq_read(seq)) >= 0) {
+            if (strlen(seq->seq.s) >= sizeLimit) {
+                if (directData) {
+                    compute(seq->name.s, seq->seq.s, config, directData);
+
+                }
+
+                if (reverseData) {
+                    reverse(seq->seq.s);
+                    complementary(seq->seq.s);
+                    compute(seq->name.s, seq->seq.s, config, reverseData);
+
                 }
             }
+        }
+    } else {
 
-            if (reverseData) {
-                reverse(seq->seq.s);
-                complementary(seq->seq.s);
-                if (predictData(seq->name.s, seq->seq.s, config, reverseData, model)) {
-                    reversePositive++;
+
+        while ((l = kseq_read(seq)) >= 0) {
+            if (strlen(seq->seq.s) >= sizeLimit) {
+                count++;
+                if (directData) {
+                    if (predictData(seq->name.s, seq->seq.s, config, directData, model) > 0) {
+                        positive++;
+                    }
+                }
+
+                if (reverseData) {
+                    reverse(seq->seq.s);
+                    complementary(seq->seq.s);
+                    if (predictData(seq->name.s, seq->seq.s, config, reverseData, model)) {
+                        reversePositive++;
+                    }
                 }
             }
         }
     }
-
-    configDestroy(config);
+    if(config) {
+        configDestroy(config);
+    }
     kseq_destroy(seq);
     gzclose(fp);
 

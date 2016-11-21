@@ -447,7 +447,8 @@ void compute(const char *seqName, const char *seq, const Config *config, FILE *o
     } else {
         attributeVectorSize = MAX_PATTERNS;
         attributes = malloc(attributeVectorSize * sizeof(char *));
-        for (int i = 0; i < attributeVectorSize; ++i) {
+        size_t i;
+        for (i = 0; i < attributeVectorSize; ++i) {
             attributes[i] = (char *) &possible_attributes[i];
         }
 
@@ -765,7 +766,8 @@ int main(int argc, char *argv[]) {
             attributeVectorSize = MAX_PATTERNS;
 
             attributes = malloc(attributeVectorSize * sizeof(char *));
-            for (int i = 0; i < attributeVectorSize; ++i) {
+            size_t i;
+            for (i = 0; i < attributeVectorSize; ++i) {
                 attributes[i] = (char *) &possible_attributes[i];
             }
 

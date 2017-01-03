@@ -15,10 +15,12 @@
 
 #define CODON_LENGTH 3
 
-#define MAX_PATTERNS 338
+#define MAX_PATTERNS 340
 const char possible_attributes[MAX_PATTERNS][5] = {
         "ol",
         "op",
+        "ll",
+        "lp",
         "aa",
         "ac",
         "ag",
@@ -423,6 +425,44 @@ size_t firstOrfSize(SuffixArray sa) {
     return 0;
 }
 
+size_t longestOrfSize(SuffixArray sa) {
+    size_t first;
+    size_t count;
+    size_t maxLenght;
+    const char *suffix;
+    size_t i;
+    size_t j;
+    bool found;
+
+    count = suffixArraySearch(sa, "atg", &first);
+
+
+    maxLenght = 0;
+    if (count) {
+        for (i = first; i < first + count; i++) {
+            suffix = sa->suffix[i];
+
+            found = false;
+            for (j = CODON_LENGTH; j + CODON_LENGTH < strlen(suffix); j += CODON_LENGTH) {
+                if (strncmp(suffix + j, "taa", CODON_LENGTH) == 0 ||
+                    strncmp(suffix + j, "tga", CODON_LENGTH) == 0 ||
+                    strncmp(suffix + j, "tag", CODON_LENGTH) == 0) {
+                    printf("%s\n", suffix);
+                    if (j + CODON_LENGTH > maxLenght) {
+                        maxLenght = j + CODON_LENGTH;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if (!found && strlen(suffix) > maxLenght) {
+                maxLenght = strlen(suffix);
+            }
+        }
+    }
+    return maxLenght;
+}
+
 void compute(const char *seqName, const char *seq, const Config *config, FILE *output) {
 
     size_t count;
@@ -430,9 +470,8 @@ void compute(const char *seqName, const char *seq, const Config *config, FILE *o
     size_t total;
     size_t length;
     ssize_t orfLength;
+    ssize_t longestOrfLength;
     SuffixArray sa;
-    double predict_label;
-    double predict_estimates;
 
     length = strlen(seq);
 
@@ -455,6 +494,8 @@ void compute(const char *seqName, const char *seq, const Config *config, FILE *o
     }
 
     orfLength = -1;
+    longestOrfLength = -1;
+
     int i, j;
 
     fprintf(output, "%s", seqName);
@@ -473,6 +514,18 @@ void compute(const char *seqName, const char *seq, const Config *config, FILE *o
                 orfLength = firstOrfSize(sa);
             }
             value = (double) orfLength / (double) length;
+
+        } else if (strcasecmp(attr, "ll") == 0) {
+            if (longestOrfLength == -1) {
+                longestOrfLength = longestOrfSize(sa);
+            }
+            value = longestOrfLength;
+
+        } else if (strcasecmp(attr, "lp") == 0) {
+            if (longestOrfLength == -1) {
+                longestOrfLength = longestOrfSize(sa);
+            }
+            value = (double) longestOrfLength / (double) length;
 
         } else {
             count = suffixArraySearch(sa, attr, NULL);
@@ -504,6 +557,7 @@ double predictData(const char *seqName, const char *seq, const Config *config, F
     size_t total;
     size_t length;
     ssize_t orfLength;
+    ssize_t longestOrfLength;
     SuffixArray sa;
     double predict_label;
     double predict_estimates;
@@ -513,6 +567,7 @@ double predictData(const char *seqName, const char *seq, const Config *config, F
     sa = suffixArrayCreate(seq);
 
     orfLength = -1;
+    longestOrfLength = -1;
     struct svm_node *x = malloc(sizeof(struct svm_node) * (config->attributeVectorSize + 1));
     int i, j;
     for (i = 0; i < config->attributeVectorSize; ++i) {
@@ -530,7 +585,18 @@ double predictData(const char *seqName, const char *seq, const Config *config, F
                 orfLength = firstOrfSize(sa);
             }
             x[i].value = (double) orfLength / (double) length;
-        } else {
+        } else if (strcasecmp(attr, "ll") == 0) {
+            if (longestOrfLength == -1) {
+                longestOrfLength = longestOrfSize(sa);
+            }
+            x[i].value = longestOrfLength;
+
+        } else if (strcasecmp(attr, "lp") == 0) {
+            if (longestOrfLength == -1) {
+                longestOrfLength = longestOrfSize(sa);
+            }
+            x[i].value = (double) longestOrfLength / (double) length;
+        } else{
             count = suffixArraySearch(sa, attr, NULL);
             attr_length = strlen(attr);
 
@@ -840,7 +906,7 @@ int main(int argc, char *argv[]) {
             }
         }
     }
-    if(config) {
+    if (config) {
         configDestroy(config);
     }
     kseq_destroy(seq);

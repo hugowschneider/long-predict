@@ -447,7 +447,6 @@ size_t longestOrfSize(SuffixArray sa) {
                 if (strncmp(suffix + j, "taa", CODON_LENGTH) == 0 ||
                     strncmp(suffix + j, "tga", CODON_LENGTH) == 0 ||
                     strncmp(suffix + j, "tag", CODON_LENGTH) == 0) {
-                    printf("%s\n", suffix);
                     if (j + CODON_LENGTH > maxLenght) {
                         maxLenght = j + CODON_LENGTH;
                         found = true;

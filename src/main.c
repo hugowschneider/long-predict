@@ -365,16 +365,16 @@ KSEQ_INIT(gzFile, gzread)
 
 void usage(int argc, char *argv[]) {
     fprintf(stderr, "Usage: %s [-o] [-c <model config file>] -i <fasta file> [-d <both|-|+> ] [-s <size>]\n"
-            "\t-c\tModel config file. File specifying the libSVM model and the used attributes\n"
-            "\t-d\tDirection. The direction of the fasta file sequences for prediction. '+' will\n"
-            "\t\tread the sequences as is. '-' will use the complementary sequence. And both will\n"
-            "\t\tuse both options. This option is used for all sequences in the file. Default '+'\n"
-            "\t-i\tInput Fasta file for prediction. This file should be a plain text or a gzip fasta\n"
-            "\t\tfile\n"
-            "\t-o\tData only. Output the frequencies of nucleotides patterns and orf size and relation to \n"
+            "\t-a\tAttributes only. Output the frequencies of nucleotides patterns and orf size and relation to \n"
             "\t\ttranscript size.\n"
             "\t\tThe model file will determine the nucleotides patterns will be used, if not present, all\n"
             "\t\tpatterns will be calculated\n"
+            "\t-c\tModel config file. File specifying the libSVM model and the used attributes\n"
+            "\t-d\tDirection '+' or '-'. The direction of the fasta file sequences for prediction. '+' will\n"
+            "\t\tread the sequences as is. And '-' will use the complementary sequence. Default '+'\n"
+            "\t-i\tInput Fasta file for prediction. This file should be a plain text or a gzip fasta\n"
+            "\t\tfile\n"
+            "\t-o\tOutput file. The file where the predictions or the attributes will be saved\n"
             "\t-s\tSize limit. This attribute ignore sequences shorter than this limit. Default 200\n"
             "\n"
             "Model Config File is a plain text file containing the following attributes:\n"
@@ -595,7 +595,7 @@ double predictData(const char *seqName, const char *seq, const Config *config, F
                 longestOrfLength = longestOrfSize(sa);
             }
             x[i].value = (double) longestOrfLength / (double) length;
-        } else{
+        } else {
             count = suffixArraySearch(sa, attr, NULL);
             attr_length = strlen(attr);
 
@@ -713,6 +713,7 @@ int main(int argc, char *argv[]) {
 
     int opt;
     int computeOnly = FALSE;
+    int reverseCalc = FALSE;
 
     char *confFile = NULL;
     char *fastaFile = NULL;
@@ -723,11 +724,10 @@ int main(int argc, char *argv[]) {
     int l;
     ssize_t sizeLimit;
 
-    FILE *directData = NULL;
-    FILE *reverseData = NULL;
+    FILE *output = NULL;
 
-    char *directDataPath;
-    char *complementaryDataPath;
+
+    char *outputPath = NULL;
 
     struct svm_model *model = NULL;
 
@@ -743,8 +743,11 @@ int main(int argc, char *argv[]) {
             case 'd':
                 direction = optarg;
                 break;
-            case 'o':
+            case 'a':
                 computeOnly = TRUE;
+                break;
+            case 'o':
+                outputPath = optarg;
                 break;
             case 's':
                 if (sscanf(optarg, "%zu", &sizeLimit) < 1 || sizeLimit < 0) {
@@ -776,40 +779,32 @@ int main(int argc, char *argv[]) {
         usage(argc, argv);
     }
 
-    directDataPath = malloc(sizeof(char) * (strlen(fastaFile) + 10));
-    strcpy(directDataPath, fastaFile);
-    strcat(directDataPath, ".pred.csv");
-    complementaryDataPath = malloc(sizeof(char) * (strlen(fastaFile) + 18));
-    strcpy(complementaryDataPath, fastaFile);
-    strcat(complementaryDataPath, ".reverse.pred.csv");
+    if(outputPath) {
+        output = fopen(outputPath, "w");
+    } else {
+        output = stdout;
+    }
 
     if (direction) {
-        if (strcasecmp(direction, "both") == 0) {
-            directData = fopen(directDataPath, "w");
-            reverseData = fopen(complementaryDataPath, "w");
-        } else if (strcasecmp(direction, "-") == 0) {
-            reverseData = fopen(complementaryDataPath, "w");
+        if (strcasecmp(direction, "-") == 0) {
+            reverseCalc = TRUE;
         } else if (strcasecmp(direction, "+") == 0) {
-            directData = fopen(directDataPath, "w");
+            reverseCalc = FALSE;
         } else {
             usage(argc, argv);
         }
     } else {
-        directData = fopen(directDataPath, "w");
+        reverseCalc = FALSE;
     }
 
     if (access(fastaFile, F_OK | R_OK) == -1) {
         fprintf(stderr, "Cannot read fasta file '%s'.\n", fastaFile);
-        free(directDataPath);
-        free(complementaryDataPath);
         usage(argc, argv);
     }
 
 
     if (!computeOnly && access(config->modelFile, F_OK | R_OK) == -1) {
         fprintf(stderr, "Cannot read model file '%s'. Please review your config file\n", config->modelFile);
-        free(directDataPath);
-        free(complementaryDataPath);
         usage(argc, argv);
     }
 
@@ -819,7 +814,7 @@ int main(int argc, char *argv[]) {
 
     if (config) {
         printf("Model file: %s\n", config->modelFile);
-        if(config->desc) {
+        if (config->desc) {
             printf("Model description: %s\n", config->desc);
         }
 
@@ -848,24 +843,16 @@ int main(int argc, char *argv[]) {
             free(attributes);
         }
 
-        if (directData) {
-            fprintf(directData, "ID,");
-            fprintf(directData, "%s", string);
-            fprintf(directData, "\n");
-        }
-        if (reverseData) {
-            fprintf(reverseData, "ID,");
-            fprintf(reverseData, "%s", string);
-            fprintf(reverseData, "\n");
+        if (output) {
+            fprintf(output, "ID,");
+            fprintf(output, "%s", string);
+            fprintf(output, "\n");
         }
 
     } else {
         model = svm_load_model(config->modelFile);
-        if (directData) {
-            fprintf(directData, "ID,Size,Classification,Probability lncRNA,Probability PCT\n");
-        }
-        if (reverseData) {
-            fprintf(reverseData, "ID,Size,Classification,Probability lncRNA,Probability PCT\n");
+        if (output) {
+            fprintf(output, "ID,Size,Classification,Probability lncRNA,Probability PCT\n");
         }
     }
     size_t count = 0;
@@ -874,16 +861,14 @@ int main(int argc, char *argv[]) {
     if (computeOnly) {
         while ((l = kseq_read(seq)) >= 0) {
             if (strlen(seq->seq.s) >= sizeLimit) {
-                if (directData) {
-                    compute(seq->name.s, seq->seq.s, config, directData);
 
-                }
-
-                if (reverseData) {
+                if (reverseCalc) {
                     reverse(seq->seq.s);
                     complementary(seq->seq.s);
-                    compute(seq->name.s, seq->seq.s, config, reverseData);
+                    compute(seq->name.s, seq->seq.s, config, output);
 
+                } else {
+                    compute(seq->name.s, seq->seq.s, config, output);
                 }
             }
         }
@@ -893,17 +878,15 @@ int main(int argc, char *argv[]) {
         while ((l = kseq_read(seq)) >= 0) {
             if (strlen(seq->seq.s) >= sizeLimit) {
                 count++;
-                if (directData) {
-                    if (predictData(seq->name.s, seq->seq.s, config, directData, model) > 0) {
-                        positive++;
-                    }
-                }
-
-                if (reverseData) {
+                if (reverseCalc) {
                     reverse(seq->seq.s);
                     complementary(seq->seq.s);
-                    if (predictData(seq->name.s, seq->seq.s, config, reverseData, model)) {
+                    if (predictData(seq->name.s, seq->seq.s, config, output, model)) {
                         reversePositive++;
+                    }
+                } else {
+                    if (predictData(seq->name.s, seq->seq.s, config, output, model) > 0) {
+                        positive++;
                     }
                 }
             }
@@ -915,22 +898,14 @@ int main(int argc, char *argv[]) {
     kseq_destroy(seq);
     gzclose(fp);
 
-    if (directData) {
-        printf("Predicted lncRNAs: %.2f%% (%zu/%zu)\n", ((double) positive / (double) count) * 100.0, positive, count);
-        fclose(directData);
+    if (!computeOnly) {
+        svm_free_and_destroy_model(&model);
+        if (output) {
+            printf("Predicted lncRNAs: %.2f%% (%zu/%zu)\n", ((double) positive / (double) count) * 100.0, positive,
+                   count);
+            fclose(output);
+        }
     }
-
-    if (reverseData && !computeOnly) {
-        printf("Predicted lncRNAs in complementary sequence: %.2f%% (%zu/%zu)\n",
-               ((double) reversePositive / (double) count) * 100.0, reversePositive, count);
-        fclose(reverseData);
-    }
-
-    svm_free_and_destroy_model(&model);
-
-    free(directDataPath);
-    free(complementaryDataPath);
-
 
     return 0;
 }

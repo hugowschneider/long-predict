@@ -69,6 +69,7 @@ Config *parseConfigFile(const char *configFilePath) {
         return 0;
     }
     config = (Config *) malloc(sizeof(Config));
+    config->desc = NULL;
     configFile = fopen(configFilePath, "r");
 
     if (!configFile) {
@@ -109,6 +110,9 @@ Config *parseConfigFile(const char *configFilePath) {
                     config->attributeVectorSize = tokenCount;
                     config->attributes = malloc(tokenCount * sizeof(char *));
                     memcpy(config->attributes, attributes, tokenCount * sizeof(char *));
+                } else if (strcasecmp(propBuffer, "desc") == 0) {
+                    config->desc = malloc(sizeof(char) * strlen(valueBuffer) + 1);
+                    strcpy(config->desc, valueBuffer);
                 }
             }
         }
@@ -128,6 +132,7 @@ void configDestroy(Config *config) {
     for ( i = 0; i < config->attributeVectorSize; ++i) {
         free(config->attributes[i]);
     }
+    free(config->desc);
     free(config->attributes);
     free(config->modelFile);
     free(config);

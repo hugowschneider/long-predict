@@ -9,6 +9,7 @@
 
 typedef struct {
     char * modelFile;
+    char * desc;
     char ** attributes;
     size_t attributeVectorSize;
 } Config;

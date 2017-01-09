@@ -365,21 +365,21 @@ KSEQ_INIT(gzFile, gzread)
 
 void usage(int argc, char *argv[]) {
     fprintf(stderr, "Usage: %s [-o] [-c <model config file>] -i <fasta file> [-d <both|-|+> ] [-s <size>]\n"
-            "\t-o\tData only. Output the frequencies of nucleotides patterns and orf size and relation to \n"
-            "\t\ttranscript size.\n"
-            "\t\tThe model file will determine the nucleotides patterns will be used, if not present, all\n"
-            "\t\tpatterns will be calculated"
             "\t-c\tModel config file. File specifying the libSVM model and the used attributes\n"
-            "\t-i\tInput Fasta file for prediction. This file should be a plain text or a gzip fasta\n"
-            "\t\tfile\n"
             "\t-d\tDirection. The direction of the fasta file sequences for prediction. '+' will\n"
             "\t\tread the sequences as is. '-' will use the complementary sequence. And both will\n"
             "\t\tuse both options. This option is used for all sequences in the file. Default '+'\n"
+            "\t-i\tInput Fasta file for prediction. This file should be a plain text or a gzip fasta\n"
+            "\t\tfile\n"
+            "\t-o\tData only. Output the frequencies of nucleotides patterns and orf size and relation to \n"
+            "\t\ttranscript size.\n"
+            "\t\tThe model file will determine the nucleotides patterns will be used, if not present, all\n"
+            "\t\tpatterns will be calculated\n"
             "\t-s\tSize limit. This attribute ignore sequences shorter than this limit. Default 200\n"
             "\n"
             "Model Config File is a plain text file containing the following attributes:\n"
             "\tmodelFile\tThe path to the model file. It can be relative to the config file or\n"
-            "\t\t\t\tan absolute path\n"
+            "\tdect\tThe model description\n"
             "\tattributes\tThe list of attributes used in the model training. This attributes are valid\n"
             "\t\t\t\tnucleotide frequencies, for example 'aa' and 'atc', and the values 'ol' for\n"
             "\t\t\t\tfirst ORF lenght and 'op' for first ORF percentage of the corresponding transcript\n"
@@ -819,6 +819,10 @@ int main(int argc, char *argv[]) {
 
     if (config) {
         printf("Model file: %s\n", config->modelFile);
+        if(config->desc) {
+            printf("Model description: %s\n", config->desc);
+        }
+
     }
 
     if (computeOnly) {
@@ -916,7 +920,7 @@ int main(int argc, char *argv[]) {
         fclose(directData);
     }
 
-    if (reverseData) {
+    if (reverseData && !computeOnly) {
         printf("Predicted lncRNAs in complementary sequence: %.2f%% (%zu/%zu)\n",
                ((double) reversePositive / (double) count) * 100.0, reversePositive, count);
         fclose(reverseData);

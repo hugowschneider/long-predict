@@ -81,7 +81,7 @@ Config *parseConfigFile(const char *configFilePath) {
 
     while ((charactersRead = getline(&buffer, &bufferSize, configFile)) != EOF) {
         if (charactersRead > 0) {
-            if (sscanf(buffer, "%[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ]=%s", propBuffer, valueBuffer) ==
+            if (sscanf(buffer, "%[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ]=%[^\t\n]", propBuffer, valueBuffer) ==
                 2) {
                 if (strcasecmp(propBuffer, "modelFile") == 0) {
                     config->modelFile = malloc(strlen(valueBuffer) + strlen(dirPath) + 2);

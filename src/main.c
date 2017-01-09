@@ -364,7 +364,7 @@ KSEQ_INIT(gzFile, gzread)
 
 
 void usage(int argc, char *argv[]) {
-    fprintf(stderr, "Usage: %s [-o] [-c <model config file>] -i <fasta file> [-d <both|-|+> ] [-s <size>]\n"
+    fprintf(stderr, "Usage: %s [-a] [-c <model config file>] -i <fasta file> [-d <-|+>] [-s <size>] [-o <output file>]\n"
             "\t-a\tAttributes only. Output the frequencies of nucleotides patterns and orf size and relation to \n"
             "\t\ttranscript size.\n"
             "\t\tThe model file will determine the nucleotides patterns will be used, if not present, all\n"
@@ -732,7 +732,7 @@ int main(int argc, char *argv[]) {
     struct svm_model *model = NULL;
 
     sizeLimit = -1;
-    while ((opt = getopt(argc, argv, "oc:i:d:")) != -1) {
+    while ((opt = getopt(argc, argv, "ac:d::i:o:")) != -1) {
         switch (opt) {
             case 'c':
                 confFile = optarg;

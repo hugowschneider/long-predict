@@ -10,7 +10,7 @@ make
 ```
 ## Usage
 ```
-Usage: ../../long-predict/long_predict [-a] [-c <model config file>] -i <fasta file> [-d <-|+>] [-s <size>] [-o <output file>]
+Usage: ./long_predict [-a] [-c <model config file>] -i <fasta file> [-d <-|+>] [-s <size>] [-o <output file>]
 	-a	Attributes only. Output the frequencies of nucleotides patterns and orf size and relation to 
 		transcript size.
 		The model file will determine the nucleotides patterns will be used, if not present, all

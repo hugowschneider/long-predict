@@ -62,7 +62,7 @@ To calculate all metrics in the file `human.fa.gz` using the configuration file 
 `models/human.model.conf`: 
 
 ```
-./long_predict -o -c models/human.model.conf -i human.fa.gz -o output.csv
+./long_predict -a -c models/human.model.conf -i human.fa.gz -o output.csv
 ```
 
 And it creates the csv file `output.csv` containing all frequencies:
@@ -72,7 +72,7 @@ ID,a,g,c,t,aa,ac, ...
 ...
 ```
 
-If the configuration file is ommited, all possible di-, tri- and tetra-nucleotide pattern frquencies, and the first and longest ORF absolute and relative lenght are calculated.
+If the configuration file is ommited, all possible di-, tri- , tetra-nucleotide pattern frquencies, first ORF length, first ORF relative length, longest ORF length and longest ORF relative length are calculated.
 
 
 

@@ -366,8 +366,8 @@ KSEQ_INIT(gzFile, gzread)
 void usage(int argc, char *argv[]) {
     fprintf(stderr,
             "Usage: %s [-a] [-c <model config file>] -i <fasta file> [-d <-|+>] [-s <size>] [-o <output file>]\n"
-                    "\t-a\tAttributes only. Output the frequencies of nucleotides patterns and orf size and relation to \n"
-                    "\t\ttranscript size.\n"
+                    "\t-a\tAttributes only. Output the frequencies of nucleotides patterns and orf length and relative \n"
+                    "\t\tlength.\n"
                     "\t\tThe model file will determine the nucleotides patterns will be used, if not present, all\n"
                     "\t\tpatterns will be calculated\n\n"
                     "\t-c\tModel config file. File specifying the libSVM model and the used attributes\n\n"

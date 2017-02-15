@@ -364,33 +364,62 @@ KSEQ_INIT(gzFile, gzread)
 
 
 void usage(int argc, char *argv[]) {
-    fprintf(stderr, "Usage: %s [-a] [-c <model config file>] -i <fasta file> [-d <-|+>] [-s <size>] [-o <output file>]\n"
-            "\t-a\tAttributes only. Output the frequencies of nucleotides patterns and orf size and relation to \n"
-            "\t\ttranscript size.\n"
-            "\t\tThe model file will determine the nucleotides patterns will be used, if not present, all\n"
-            "\t\tpatterns will be calculated\n"
-            "\t-c\tModel config file. File specifying the libSVM model and the used attributes\n"
-            "\t-d\tDirection '+' or '-'. The direction of the fasta file sequences for prediction. '+' will\n"
-            "\t\tread the sequences as is. And '-' will use the complementary sequence. Default '+'\n"
-            "\t-i\tInput Fasta file for prediction. This file should be a plain text or a gzip fasta\n"
-            "\t\tfile\n"
-            "\t-o\tOutput file. The file where the predictions or the attributes will be saved\n"
-            "\t-s\tSize limit. This attribute ignore sequences shorter than this limit. Default 200\n"
-            "\n"
-            "Model Config File is a plain text file containing the following attributes:\n"
-            "\tmodelFile\tThe path to the model file. It can be relative to the config file or\n"
-            "\tdect\tThe model description\n"
-            "\tattributes\tThe list of attributes used in the model training. This attributes are valid\n"
-            "\t\t\t\tnucleotide frequencies, for example 'aa' and 'atc', and the values 'ol' for\n"
-            "\t\t\t\tfirst ORF lenght and 'op' for first ORF percentage of the corresponding transcript\n"
-            "\t\t\t\tlength\n"
-            "Ex.:\n"
-            "modelFile=human.model\n"
-            "attributes=aa,aaa,ac,aca,acg,op\n"
-            "", argv[0]);
+    fprintf(stderr,
+            "Usage: %s [-a] [-c <model config file>] -i <fasta file> [-d <-|+>] [-s <size>] [-o <output file>]\n"
+                    "\t-a\tAttributes only. Output the frequencies of nucleotides patterns and orf size and relation to \n"
+                    "\t\ttranscript size.\n"
+                    "\t\tThe model file will determine the nucleotides patterns will be used, if not present, all\n"
+                    "\t\tpatterns will be calculated\n\n"
+                    "\t-c\tModel config file. File specifying the libSVM model and the used attributes\n\n"
+                    "\t-d\tDirection '+' or '-'. The direction of the fasta file sequences for prediction. '+' will\n"
+                    "\t\tread the sequences as is. And '-' will use the reverse complementary sequence. Default '+'\n"
+                    "\t-i\tInput Fasta file for prediction. This file should be a plain text or a gzip fasta\n"
+                    "\t\tfile\n\n"
+                    "\t-o\tOutput file. The file where the predictions or the attributes will be saved\n\n"
+                    "\t-s\tSize limit. This attribute ignore sequences shorter than this limit. Default 200\n\n"
+                    "\t-t\tTrim sequence. Remove all nucleotides until the first 'ATG'\n\n"
+                    "\n"
+                    "Model Config File is a plain text file containing the following attributes:\n"
+                    "\tmodelFile\tThe path to the model file. It can be relative to the config file or\n"
+                    "\t\t\t\tan absolute path\n\n"
+                    "\tdesc\t\tThe model description\n\n"
+                    "\tattributes\tThe list of attributes used in the model training. This attributes are valid\n"
+                    "\t\t\t\tnucleotide frequencies, for example 'aa' and 'atc', and the values 'ol' for\n"
+                    "\t\t\t\tfirst ORF lenght, 'op' for first ORF relative length, 'll' for longest ORF\n"
+                    "\t\t\t\tlength and 'lp' for longest ORF relative length\n\n"
+                    "Ex.:\n"
+                    "desc=This is an example\n"
+                    "modelFile=human.model\n"
+                    "attributes=aa,aaa,ac,aca,acg,op\n"
+                    "", argv[0]);
     exit(EXIT_FAILURE);
 }
 
+const char *trucancateSequence(SuffixArray sa) {
+    size_t first;
+    size_t count;
+    size_t length;
+    size_t maxLenght;
+    const char *suffix;
+    size_t i;
+    size_t j;
+    count = suffixArraySearch(sa, "atg", &first);
+    suffix = NULL;
+    if (count) {
+        maxLenght = 0;
+        for (i = first; i < first + count; i++) {
+            length = strlen(sa->suffix[i]);
+            if (maxLenght < length) {
+                maxLenght = length;
+                suffix = sa->suffix[i];
+            }
+        }
+
+        return suffix;
+
+    }
+    return 0;
+}
 
 size_t firstOrfSize(SuffixArray sa) {
     size_t first;
@@ -462,7 +491,7 @@ size_t longestOrfSize(SuffixArray sa) {
     return maxLenght;
 }
 
-void compute(const char *seqName, const char *seq, const Config *config, FILE *output) {
+void compute(const char *seqName, const char *seq, const Config *config, FILE *output, int truncate) {
 
     size_t count;
     size_t attr_length;
@@ -471,13 +500,23 @@ void compute(const char *seqName, const char *seq, const Config *config, FILE *o
     ssize_t orfLength;
     ssize_t longestOrfLength;
     SuffixArray sa;
+    char * newSeq;
 
     length = strlen(seq);
 
     size_t attributeVectorSize;
     char **attributes;
 
+    newSeq = NULL;
     sa = suffixArrayCreate(seq);
+
+    if(truncate) {
+        const char *trunc = trucancateSequence(sa);
+        newSeq = malloc(sizeof(char) * strlen(trunc) + 1);
+        strcpy(newSeq, trunc);
+        suffixArrayDestroy(sa);
+        sa = suffixArrayCreate(newSeq);
+    }
 
     if (config) {
         attributeVectorSize = config->attributeVectorSize;
@@ -546,9 +585,13 @@ void compute(const char *seqName, const char *seq, const Config *config, FILE *o
 
     suffixArrayDestroy(sa);
 
+    if(newSeq) {
+        free(newSeq);
+    }
+
 }
 
-double predictData(const char *seqName, const char *seq, const Config *config, FILE *output,
+double predictData(const char *seqName, const char *seq, const Config *config, FILE *output, int truncate,
                    struct svm_model *model) {
 
     size_t count;
@@ -560,10 +603,20 @@ double predictData(const char *seqName, const char *seq, const Config *config, F
     SuffixArray sa;
     double predict_label;
     double predict_estimates;
-
+    char * newSeq;
     length = strlen(seq);
 
+    newSeq = NULL;
     sa = suffixArrayCreate(seq);
+
+    if(truncate) {
+        const char *trunc = trucancateSequence(sa);
+        newSeq = malloc(sizeof(char) * strlen(trunc) + 1);
+        strcpy(newSeq, trunc);
+        suffixArrayDestroy(sa);
+        sa = suffixArrayCreate(newSeq);
+    }
+
 
     orfLength = -1;
     longestOrfLength = -1;
@@ -624,7 +677,9 @@ double predictData(const char *seqName, const char *seq, const Config *config, F
 
     free(x);
     suffixArrayDestroy(sa);
-
+    if(newSeq) {
+        free(newSeq);
+    }
     return predict_label;
 
 
@@ -714,6 +769,7 @@ int main(int argc, char *argv[]) {
     int opt;
     int computeOnly = FALSE;
     int reverseCalc = FALSE;
+    int truncate = FALSE;
 
     char *confFile = NULL;
     char *fastaFile = NULL;
@@ -732,7 +788,7 @@ int main(int argc, char *argv[]) {
     struct svm_model *model = NULL;
 
     sizeLimit = -1;
-    while ((opt = getopt(argc, argv, "ac:d::i:o:")) != -1) {
+    while ((opt = getopt(argc, argv, "tac:d::i:o:")) != -1) {
         switch (opt) {
             case 'c':
                 confFile = optarg;
@@ -753,6 +809,9 @@ int main(int argc, char *argv[]) {
                 if (sscanf(optarg, "%zu", &sizeLimit) < 1 || sizeLimit < 0) {
                     sizeLimit = 200;
                 }
+                break;
+            case 't':
+                truncate = TRUE;
                 break;
             default:
                 usage(argc, argv);
@@ -779,7 +838,7 @@ int main(int argc, char *argv[]) {
         usage(argc, argv);
     }
 
-    if(outputPath) {
+    if (outputPath) {
         output = fopen(outputPath, "w");
     } else {
         output = stdout;
@@ -858,6 +917,8 @@ int main(int argc, char *argv[]) {
     size_t count = 0;
     size_t reversePositive = 0;
     size_t positive = 0;
+    fflush(output);
+
     if (computeOnly) {
         while ((l = kseq_read(seq)) >= 0) {
             if (strlen(seq->seq.s) >= sizeLimit) {
@@ -865,12 +926,13 @@ int main(int argc, char *argv[]) {
                 if (reverseCalc) {
                     reverse(seq->seq.s);
                     complementary(seq->seq.s);
-                    compute(seq->name.s, seq->seq.s, config, output);
+                    compute(seq->name.s, seq->seq.s, config, output, truncate);
 
                 } else {
-                    compute(seq->name.s, seq->seq.s, config, output);
+                    compute(seq->name.s, seq->seq.s, config, output, truncate);
                 }
             }
+            fflush(output);
         }
     } else {
 
@@ -881,15 +943,16 @@ int main(int argc, char *argv[]) {
                 if (reverseCalc) {
                     reverse(seq->seq.s);
                     complementary(seq->seq.s);
-                    if (predictData(seq->name.s, seq->seq.s, config, output, model)) {
+                    if (predictData(seq->name.s, seq->seq.s, config, output, truncate, model)) {
                         reversePositive++;
                     }
                 } else {
-                    if (predictData(seq->name.s, seq->seq.s, config, output, model) > 0) {
+                    if (predictData(seq->name.s, seq->seq.s, config, output, truncate, model) > 0) {
                         positive++;
                     }
                 }
             }
+            fflush(output);
         }
     }
     if (config) {

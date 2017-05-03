@@ -611,7 +611,13 @@ double predictData(const char *seqName, const char *seq, const Config *config, F
 
     if(truncate) {
         const char *trunc = trucancateSequence(sa);
-        newSeq = malloc(sizeof(char) * strlen(trunc) + 1);
+        if (trunc){
+            newSeq = malloc(sizeof(char) * strlen(trunc) + 1);
+        } else {
+            trunc = seq;
+            newSeq = malloc(sizeof(char) * strlen(trunc) + 1);
+        }
+
         strcpy(newSeq, trunc);
         suffixArrayDestroy(sa);
         sa = suffixArrayCreate(newSeq);
